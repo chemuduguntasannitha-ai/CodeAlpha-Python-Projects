@@ -1,0 +1,81 @@
+"""
+CodeAlpha Data Analytics Internship - Task 2
+Interactive Dashboard Using Plotly and Dash
+"""
+
+import pandas as pd
+import plotly.express as px
+from dash import Dash, dcc, html, Input, Output
+
+DATA_URL = "https://raw.githubusercontent.com/mwaskom/seaborn-data/master/titanic.csv"
+df = pd.read_csv(DATA_URL)
+df['age'] = df['age'].fillna(df['age'].median())
+df = df.dropna(subset=['embark_town', 'fare', 'pclass', 'sex'])
+
+app = Dash(__name__)
+app.title = "Titanic Survival Dashboard"
+
+app.layout = html.Div(
+    style={"fontFamily": "Arial, sans-serif", "padding": "30px", "backgroundColor": "#f7f9fb"},
+    children=[
+        html.H1("Titanic Survival Dashboard", style={"textAlign": "center", "color": "#1f3a5f"}),
+        html.P("Filter passengers by class and embarkation town to explore survival patterns.",
+               style={"textAlign": "center", "color": "#555"}),
+
+        html.Div(style={"display": "flex", "justifyContent": "center", "gap": "40px", "marginBottom": "30px"}, children=[
+            html.Div([
+                html.Label("Passenger Class"),
+                dcc.Checklist(
+                    id="class-filter",
+                    options=[{"label": f"Class {c}", "value": c} for c in sorted(df["pclass"].unique())],
+                    value=sorted(df["pclass"].unique()),
+                    inline=True,
+                ),
+            ]),
+            html.Div([
+                html.Label("Embarkation Town"),
+                dcc.Dropdown(
+                    id="town-filter",
+                    options=[{"label": t, "value": t} for t in sorted(df["embark_town"].unique())],
+                    value=sorted(df["embark_town"].unique()),
+                    multi=True,
+                    style={"width": "300px"},
+                ),
+            ]),
+        ]),
+
+        html.Div(style={"display": "flex", "flexWrap": "wrap", "justifyContent": "center", "gap": "20px"}, children=[
+            dcc.Graph(id="survival-by-class-chart", style={"width": "45%"}),
+            dcc.Graph(id="survival-by-sex-chart", style={"width": "45%"}),
+            dcc.Graph(id="age-distribution-chart", style={"width": "45%"}),
+            dcc.Graph(id="fare-vs-age-chart", style={"width": "45%"}),
+        ]),
+    ],
+)
+
+
+@app.callback(
+    Output("survival-by-class-chart", "figure"),
+    Output("survival-by-sex-chart", "figure"),
+    Output("age-distribution-chart", "figure"),
+    Output("fare-vs-age-chart", "figure"),
+    Input("class-filter", "value"),
+    Input("town-filter", "value"),
+)
+def update_dashboard(selected_classes, selected_towns):
+    filtered = df[df["pclass"].isin(selected_classes) & df["embark_town"].isin(selected_towns)]
+
+    fig_class = px.histogram(filtered, x="pclass", color="survived", barmode="group",
+                              title="Survival Count by Class")
+    fig_sex = px.histogram(filtered, x="sex", color="survived", barmode="group",
+                            title="Survival Count by Sex")
+    fig_age = px.histogram(filtered, x="age", color="survived", nbins=30,
+                            title="Age Distribution by Survival")
+    fig_fare_age = px.scatter(filtered, x="age", y="fare", color="survived",
+                               title="Fare vs Age (colored by survival)")
+
+    return fig_class, fig_sex, fig_age, fig_fare_age
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
