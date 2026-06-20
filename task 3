@@ -1,0 +1,78 @@
+"""
+CodeAlpha Data Analytics Internship - Task 3
+Sentiment Analysis on Text Data
+"""
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from textblob import TextBlob
+import os
+
+os.makedirs("outputs", exist_ok=True)
+
+reviews = [
+    "The product quality is amazing, I absolutely love it!",
+    "Worst purchase I've ever made, completely useless.",
+    "It's okay, does the job but nothing special.",
+    "Excellent service and super fast delivery, highly recommend!",
+    "I am very disappointed with the build quality.",
+    "Not bad, but I expected better for the price.",
+    "Fantastic experience from start to finish, will buy again.",
+    "Terrible customer support, they never responded.",
+    "Average product, works as described.",
+    "This is the best thing I've bought all year!",
+    "Completely broke after two days of use, very upset.",
+    "Decent value for money, satisfied overall.",
+    "Horrible packaging, item arrived damaged.",
+    "Pretty good, met my expectations.",
+    "Absolutely thrilled with this purchase, five stars!",
+]
+# To use your own data:
+# df_raw = pd.read_csv("your_reviews.csv")
+# reviews = df_raw["review_text"].astype(str).tolist()
+
+df = pd.DataFrame({"review": reviews})
+
+def get_sentiment(text):
+    polarity = TextBlob(text).sentiment.polarity
+    if polarity > 0.1:
+        label = "Positive"
+    elif polarity < -0.1:
+        label = "Negative"
+    else:
+        label = "Neutral"
+    return polarity, label
+
+df["polarity"], df["sentiment"] = zip(*df["review"].apply(get_sentiment))
+print(df[["review", "polarity", "sentiment"]].to_string(index=False))
+
+sentiment_counts = df["sentiment"].value_counts()
+print(sentiment_counts)
+print(f"Average polarity: {df['polarity'].mean():.3f}")
+
+sns.set_style("whitegrid")
+
+plt.figure(figsize=(6, 5))
+sns.countplot(data=df, x="sentiment", hue="sentiment", order=["Positive", "Neutral", "Negative"],
+              palette={"Positive": "#4caf50", "Neutral": "#ffc107", "Negative": "#f44336"}, legend=False)
+plt.title("Sentiment Distribution")
+plt.savefig("outputs/sentiment_distribution.png", bbox_inches="tight")
+plt.close()
+
+plt.figure(figsize=(6, 6))
+colors = {"Positive": "#4caf50", "Neutral": "#ffc107", "Negative": "#f44336"}
+plt.pie(sentiment_counts.values, labels=sentiment_counts.index, autopct="%1.1f%%",
+        colors=[colors[l] for l in sentiment_counts.index], startangle=90)
+plt.title("Sentiment Share")
+plt.savefig("outputs/sentiment_pie.png", bbox_inches="tight")
+plt.close()
+
+plt.figure(figsize=(8, 5))
+sns.histplot(df["polarity"], bins=15, kde=True, color="steelblue")
+plt.title("Polarity Score Distribution")
+plt.savefig("outputs/polarity_distribution.png", bbox_inches="tight")
+plt.close()
+
+df.to_csv("outputs/sentiment_results.csv", index=False)
+print("Charts and results saved in 'outputs' folder.")
